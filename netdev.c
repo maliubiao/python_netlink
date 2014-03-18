@@ -367,7 +367,7 @@ netdev_setifmtu(PyObject *object, PyObject *args)
 	unsigned mtu;
 	struct ifreq req;
 
-	if (!PyArg_ParseTuple(args, "Isk:setifmtu", &fd, &devname, &mtu)) {
+	if (!PyArg_ParseTuple(args, "IsI:setifmtu", &fd, &devname, &mtu)) {
 		return NULL;
 	}
 
@@ -379,7 +379,7 @@ netdev_setifmtu(PyObject *object, PyObject *args)
 	strcpy(req.ifr_name, devname); 
 	req.ifr_mtu = mtu;
 
-	ret = ioctl(fd, SIOCSIFFLAGS, &req);
+	ret = ioctl(fd, SIOCSIFMTU, &req);
 
 	if (ret < 0) {
 		PyErr_SetFromErrno(PyExc_OSError);
@@ -629,7 +629,7 @@ netdev_ifnetmask(PyObject *object, PyObject *args)
 	char *devname;
 	struct ifreq req;
 	
-	if (!PyArg_ParseTuple(args, "Is:ifdstaddr", &fd, &devname)) {
+	if (!PyArg_ParseTuple(args, "Is:ifnetmask", &fd, &devname)) {
 		return NULL;
 	} 
 
