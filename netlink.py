@@ -328,86 +328,289 @@ MAX_ADDR_LEN = 32
 IFNAMSIZ = 16
 MAX_PHYS_PORT_ID_LEN = 32
 
+
+def parse_policy_string(raw):
+    return raw.strip("\x00") 
+
+def parse_policy_binary(raw):
+    return raw 
+
+def parse_policy_u8(raw):
+    return struct.unpack("B", raw)[0]
+
+def parse_policy_u16(raw):
+    return struct.unpack("H", raw)[0]
+
+def parse_policy_u32(raw):
+    return struct.unpack("H", raw)[0]
+
+def parse_policy_u64(raw):
+    return struct.unpack("Q", raw)[0] 
+
+
+def new_policy_binary(binary):
+    return binary
+
+def new_policy_string(string):
+    return string+"\x00"
+
+def new_policy_u8(num):
+    return struct.pack("B", num) 
+
+def new_policy_u16(num):
+    return struct.pack("H", num)
+
+def new_policy_u32(num):
+    return struct.pack("H", num)
+
+def new_policy_u64(raw):
+    return struct.pack("H", num) 
+
+
+link_ifmap = (
+        ("mem_start", "Q"),
+        ("mem_end", "Q"),
+        ("base_addr", "Q"),
+        ("irq", "H"),
+        ("dma", "B"),
+        ("port", "B")
+        )
+
+
+def new_ifmap(d):
+    return new_struct(d, link_ifmap)
+
+
+def parse_ifmap(b):
+    return parse_struct(b, link_ifmap)
+
+
+link_stats = (
+        ("rx_packets", "I"),
+        ("tx_packets", "I"),
+        ("rx_bytes", "I"),
+        ("tx_bytes", "I"),
+        ("rx_errors", "I"),
+        ("tx_errors", "I"),
+        ("rx_dropped", "I"),
+        ("tx_dropped", "I"),
+        ("mulicast", "I"),
+        ("rx_length_errors", "I"),
+        ("rx_over_errors", "I"),
+        ("rx_crc_errors", "I"),
+        ("rx_frame_errors", "I"),
+        ("rx_fifo_errors", "I"),
+        ("rx_missed_errors", "I"),
+        ("tx_aborted_errors", "I"),
+        ("tx_carrier_errors", "I"),
+        ("tx_fifo_errors", "I"),
+        ("tx_heartbeat_errors", "I"),
+        ("tx_window_errors", "I"),
+        ("rx_compressed", "I"),
+        ("tx_compressed", "I")
+        )
+
+def new_stats(d):
+    return new_struct(d, link_stats)
+
+
+def parse_stats(b):
+    return parse_struct(b, link_stats)
+
+
+link_stats64 = (
+        ("rx_packets", "Q"),
+        ("tx_packets", "Q"),
+        ("rx_bytes", "Q"),
+        ("tx_bytes", "Q"),
+        ("rx_errors", "Q"),
+        ("tx_errors", "Q"),
+        ("rx_dropped", "Q"),
+        ("tx_dropped", "Q"),
+        ("mulicast", "Q"),
+        ("rx_length_errors", "Q"),
+        ("rx_over_errors", "Q"),
+        ("rx_crc_errors", "Q"),
+        ("rx_frame_errors", "Q"),
+        ("rx_fifo_errors", "Q"),
+        ("rx_missed_errors", "Q"),
+        ("tx_aborted_errors", "Q"),
+        ("tx_carrier_errors", "Q"),
+        ("tx_fifo_errors", "Q"),
+        ("tx_heartbeat_errors", "Q"),
+        ("tx_window_errors", "Q"),
+        ("rx_compressed", "Q"),
+        ("tx_compressed", "Q")
+        ) 
+
+
+def new_stats64(d):
+    return new_struct(d, link_stats64)
+
+
+def parse_stats64(b):
+    return parse_struct(b, link_stats64)
+
+
+def parse_afspec(attr): 
+    b = cStringIO.StringIO(attr["payload"])
+    attrs = parse_nested(attr)
+    for m in attrs:
+        if m["type"] == AF_INET: 
+            pdb.set_trace()
+            m = parse_nested(m)[0]
+            x = cStringIO.StringIO(m["payload"])
+            conf = parse_ipv4_devconf(b) 
+        elif m["type"] == AF_INET6:
+            pass
+
+
 ifla_attr_policy = { 
-        IFLA_UNSPEC: (NLA_UNSPEC, -1),
-        IFLA_ADDRESS: (NLA_BINARY, MAX_ADDR_LEN), 
-        IFLA_BROADCAST: (NLA_BINARY, MAX_ADDR_LEN),
-        IFLA_IFNAME: (NLA_STRING, IFNAMSIZ - 1),
-        IFLA_MTU: (NLA_U32, -1),
-        IFLA_LINK:(NLA_U32, -1),
-        IFLA_QDISC: (NLA_STRING, -1),
-        IFLA_STATS: (NLA_STRUCT, -1),
-        #IFLA_COST = 8
-        #IFLA_PRIORITY = 9
-        IFLA_MASTER: (NLA_U32, -1),
-        #IFLA_WIRELESS = 11
-        #IFLA_PROTINFO = 12
-        IFLA_TXQLEN: (NLA_U32, -1),
-        IFLA_MAP: (NLA_STRUCT, -1),
-        IFLA_WEIGHT: (NLA_U32, -1),
-        IFLA_OPERSTATE: (NLA_U8, -1),
-        IFLA_LINKMODE: (NLA_U8, -1),
+        IFLA_ADDRESS: (NLA_BINARY, parse_policy_binary), 
+        IFLA_BROADCAST: (NLA_BINARY, parse_policy_binary),
+        IFLA_IFNAME: (NLA_STRING, parse_policy_string),
+        IFLA_MTU: (NLA_U32, parse_policy_u32),
+        IFLA_LINK:(NLA_U32, parse_policy_u32),
+        IFLA_QDISC: (NLA_STRING, parse_policy_string),
+        IFLA_STATS: (NLA_STRUCT, parse_stats),
+        IFLA_COST: (NLA_STRUCT, -1), #
+        IFLA_PRIORITY: (NLA_STRUCT, -1), #
+        IFLA_MASTER: (NLA_U32, parse_policy_u32),
+        IFLA_WIRELESS: (NLA_STRUCT, -1), #
+        IFLA_PROTINFO: (NLA_STRUCT, -1),#
+        IFLA_TXQLEN: (NLA_U32, parse_policy_u32),
+        IFLA_MAP: (NLA_STRUCT, parse_ifmap),
+        IFLA_WEIGHT: (NLA_U32, parse_policy_u32),
+        IFLA_OPERSTATE: (NLA_U8, parse_policy_u8),
+        IFLA_LINKMODE: (NLA_U8, parse_policy_u8),
         IFLA_LINKINFO: (NLA_NESTED, -1),
-        IFLA_NET_NS_PID: (NLA_U32, -1),
-        IFLA_IFALIAS: (NLA_STRING, -1),
-        #IFLA_NUM_VF = 21
+        IFLA_NET_NS_PID: (NLA_U32, parse_policy_u32),
+        IFLA_IFALIAS: (NLA_STRING, parse_policy_string),
+        IFLA_NUM_VF: (NLA_U32, parse_policy_u32), #
         IFLA_VFINFO_LIST: (NLA_NESTED, -1),
-        IFLA_STATS64: (NLA_STRUCT, -1),
+        IFLA_STATS64: (NLA_STRUCT, parse_stats64),
         IFLA_VF_PORTS: (NLA_NESTED, -1),
         IFLA_PORT_SELF: (NLA_NESTED, -1),
         IFLA_AF_SPEC: (NLA_NESTED, -1),
-        #IFLA_GROUP = 27
-        IFLA_NET_NS_FD: (NLA_U32, -1),
-        IFLA_EXT_MASK: (NLA_U32, -1),
-        IFLA_PROMISCUITY: (NLA_U32, -1),
-        IFLA_NUM_TX_QUEUES: (NLA_U32, -1),
-        IFLA_NUM_RX_QUEUES: (NLA_U32, -1),
-        IFLA_CARRIER: (NLA_U8, -1),
-        IFLA_PHYS_PORT_ID: (NLA_BINARY, MAX_PHYS_PORT_ID_LEN),
-        IFLA_CARRIER_CHANGES: (NLA_U32, -1)
+        IFLA_GROUP: (NLA_U32, parse_policy_u32), #
+        IFLA_NET_NS_FD: (NLA_U32, parse_policy_u32),
+        IFLA_EXT_MASK: (NLA_U32, parse_policy_u32),
+        IFLA_PROMISCUITY: (NLA_U32, parse_policy_u32),
+        IFLA_NUM_TX_QUEUES: (NLA_U32, parse_policy_u32),
+        IFLA_NUM_RX_QUEUES: (NLA_U32, parse_policy_u32),
+        IFLA_CARRIER: (NLA_U8, parse_policy_u8),
+        IFLA_PHYS_PORT_ID: (NLA_BINARY, parse_policy_binary),
+        IFLA_CARRIER_CHANGES: (NLA_U32, parse_policy_u32)
         }
 
-def parse_policy_struct(raw, struct):
+IFLA_VF_INFO_UNSPEC = 0
+IFLA_VF_INFO = 1
+
+IFLA_VF_UNSPEC = 0
+#hardware queue specific attribute
+IFLA_VF_MAC = 1 
+IFLA_VF_VLAN = 2
+#max tx badnwidth allocation
+IFLA_VF_TX_RATE = 3
+#spoof checking on/off switch
+IFLA_VF_SPOOFCHK = 4
+#link state enable/disable/auto switch
+IFLA_VF_LINK_STATE = 5
+#min and max tx badnwidth allocation
+IFLA_VF_RATE  = 6
+
+
+def parse_vf_unspec(b):
+    return None
+
+def parse_vf_mac(b):
+    d = b.read(36)
+    return {
+            "vf": struct.unpack("I", d[:4])[0],
+            "mac": d[4:] 
+            } 
+
+def new_vf_map(d):
+    return struct.pack("I", d["vf"]) + d["mac"]
+
+
+vf_vlan = {
+        "vf": "I",
+        "vlan": "I",
+        "qos": "I"
+        }
+
+def new_vf_vlan(d):
+    return new_struct(d, vf_vlan)
+
+def parse_vf_vlan(b):
+    return parse_struct(b, vf_vlan)
+
+
+vf_tx_rate = {
+        "vf": "I",
+        "rate": "I"
+        }
+
+def new_vf_tx_rate(d):
+    return new_struct(d, vf_tx_rate)
+
+
+def parse_vf_tx_rate(b):
+    return parse_struct(b, vf_tx_rate)
+
+
+vf_rate = {
+        "vf": "I",
+        "min_tx_rate": "I",
+        "max_tx_rate": "I"
+        }
+
+def new_vf_rate(d):
+    return new_struct(d, vf_rate)
+
+def parse_vf_rate(b):
+    return parse_struct(b, vf_rate)
+
+
+vf_spoofchk = {
+        "vf": "I",
+        "setting": "I"
+        }
+
+def new_vf_spoofchk(d):
+    return new_struct(d, vf_spoofchk)
+
+def parse_vf_spoofchk(b):
+    return parse_struct(b, vf_spoofchk)
+
+
+vf_link_state = {
+        "vf": "I",
+        "link_state": "I"
+        }
+
+def new_vf_link_state(d):
+    return new_struct(d, vf_link_state)
+
+
+def parse_vf_link_state(b):
+    return parse_struct(b, vf_link_state) 
+
+
+ifla_vf = {
+        IFLA_VF_UNSPEC: parse_vf_unspec,
+        IFLA_VF_MAC: parse_vf_mac,
+        IFLA_VF_VLAN: parse_vf_vlan,
+        IFLA_VF_TX_RATE: parse_vf_tx_rate,
+        IFLA_VF_SPOOFCHK: parse_vf_spoofchk,
+        IFLA_VF_LINK_STATE: parse_vf_link_state,
+        IFLA_VF_RATE: parse_vf_rate
+        }
+
+def parse_ifla_attrs(b):
     pass
 
-def parse_policy_binary(raw):
-    pass
-
-def parse_policy_string(raw):
-    pass
-
-def parse_policy_u8(raw):
-    pass
-
-def parse_policy_u16(raw):
-    pass
-
-def parse_policy_u32(raw):
-    pass
-
-def parse_policy_u64(raw):
-    pass 
-
-def new_policy_struct(d, fmt):
-    pass
-
-def new_policy_binary(binary):
-    pass
-
-def new_policy_string(string):
-    pass
-
-def new_policy_u8(num):
-    pass 
-
-def parse_policy_u16(raw):
-    pass
-
-def new_policy_u32(num):
-    pass
-
-def parse_policy_u64(raw):
-    pass 
 
 #for IFLA_AF_SPEC family 2, AF_INET
 IPV4_DEVCONF_FORWARDING = 1
@@ -436,8 +639,47 @@ IPV4_DEVCONF_ACCEPT_LOCAL = 23
 IPV4_DEVCONF_SRC_VMARK = 24
 IPV4_DEVCONF_PROXY_ARP_PVLAN = 25
 IPV4_DEVCONF_ROUTE_LOCALNET = 26
-IPV4_DEVCONF_IGMPV2_UNSOLICITED_REPORT_INTERVAL = 27
-IPV4_DEVCONF_IGMPV3_UNSOLICITED_REPORT_INTERVAL = 28 
+#not for 3.11
+#IPV4_DEVCONF_IGMPV2_UNSOLICITED_REPORT_INTERVAL = 27 
+#IPV4_DEVCONF_IGMPV3_UNSOLICITED_REPORT_INTERVAL = 28 
+
+ipv4_devconf = (
+        ("forwarding", "I"),
+        ("mc_forwarding", "I"),
+        ("proxy_arp", "I"), 
+        ("accept_redirects", "I"),
+        ("secure_redirects", "I"),
+        ("send_redirects", "I"),
+        ("shared_media", "I"), 
+        ("rp_filter", "I"),
+        ("accept_source_route", "I"), 
+        ("bootp_relay", "I"),
+        ("log_martians", "I"),
+        ("tag", "I"),
+        ("arpfilter", "I"),
+        ("medium_id", "I"), 
+        ("noxfrm", "I"),
+        ("nopolicy", "I"),
+        ("force_igmp_version", "I"), 
+        ("arp_announce", "I"), 
+        ("arp_ignore", "I"),
+        ("promote_secondaries", "I"), 
+        ("arp_accept", "I"), 
+        ("arp_notify", "I"),
+        ("accept_local", "I"), 
+        ("src_vmark", "I"), 
+        ("proxy_arp_pvlan", "I"), 
+        ("route_localnet", "I"), 
+        ("empty_slot", "I")
+        #("gmpv2_report_interval", "I"), 
+        #("gmpv3_report_interval", "I")
+        ) 
+
+def parse_ipv4_devconf(b):
+    return parse_struct(b, ipv4_devconf)
+
+def new_ipv4_devconf(d):
+    return new_struct(d, ipv4_devconf)
 
 #family 10, AF_INET6, NESTED net/ipv6/addrconf.c:4392
 IFLA_INET6_UNSPEC = 0
@@ -456,6 +698,14 @@ IFLA_INET6_ICMP6STATS = 6
 #device token
 IFLA_INET6_TOKEN = 7 
 
+ipv6_attr_policy = {
+        IFLA_INET6_FLAGS: (NLA_U32, parse_policy_u32), 
+        IFLA_INET6_CACHEINFO: (NLA_STRUCT, parse_cacheinfo),
+        IFLA_INET6_CONF: (NLA_STRUCT, parse_inet6_conf),
+        IFLA_INET6_STATS: (NLA_STRUCT, parse_inet6_stats),
+        IFLA_INET6_ICMPSTATS: (NLA_STRUCT, parse_inet6_icmpstats),
+        IFLA_INET6_TOKEN: (NLA_STRUCT, parse_inet6_addr)
+        } 
 
 ifla_cache_info = (
         ("max_reasm_len", "I"),
@@ -499,6 +749,41 @@ DEVCONF_MLDV1_UNSOLICITED_REPORT_INTERVAL = 30
 DEVCONF_MLDV2_UNSOLICITED_REPORT_INTERVAL = 31
 DEVCONF_SUPPRESS_FRAG_NDISC = 32
 
+ipv6_devconf = (
+            ("forwarding", "I"),
+            ("hoplimit", "I"),
+            ("mtu6", "I"),
+            ("accept_ra", "I"),
+            ("accept_redirects", "I"),
+            ("autoconf", "I"),
+            ("dad_transmits", "I"),
+            ("rtr_solicits", "I"),
+            ("rtr_solicit_interval", "I"),
+            ("rtr_solicit_delay", "I"),
+            ("use_tempaddr", "I"),
+            ("temp_valid_lft", "I"),
+            ("temp_prefered_lft", "I"),
+            ("regen_max_retry", "I"),
+            ("max_desync_factor", "I"),
+            ("max_addresses", "I"),
+            ("force_mld_version", "I"),
+            ("accept_ra_defrtr", "I"),
+            ("accept_ra_pinfo", "I"),
+            ("accept_ra_rtr_pref", "I"),
+            ("rtr_probe_interval", "I"),
+            ("accept_ra_rt_info_max_plen", "I"),
+            ("proxy_ndp", "I"),
+            ("optimistic_dad", "I"),
+            ("accept_source_route", "I"),
+            ("mc_forwarding", "I"),
+            ("disable_ipv6", "I"),
+            ("accept_dad", "I"),
+            ("force_tllao", "I"),
+            ("ndisc_notify", "I"),
+            ("mldv1_report_interval", "I"),
+            ("mldv2_report_interval", "I"),
+            ("suppress_frag_ndisc", "I")
+        ) 
 
 #for INET_DIAG, attrs
 INET_DIAG_NONE = 0
@@ -650,8 +935,7 @@ def new_struct(d, fmt):
     fmts = "".join([x[1] for x in fmt]) 
     for i in fmt:    
         l.append(d[i[0]])
-    return struct.pack(fmts, *l)
-
+    return struct.pack(fmts, *l) 
 
 def new_conn(proto): 
     s = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, proto) 
@@ -700,13 +984,12 @@ def parse_nlattr(b):
         b.seek(4 - (mark % 4), io.SEEK_CUR) 
     return at 
 
-
 def parse_nested(attr):
     b = cStringIO.StringIO(attr["payload"])
     tlen = attr["len"] - 4
     attrs = []
     while b.tell() < tlen:
-        attr = parse_nlattr(b)
+        attr = parse_nlattr(b) 
         attrs.append(attr)
     b.close()
     return attrs 
@@ -752,90 +1035,6 @@ def route_getlink(index, seq):
     hdr = new_nlmsg(RTM_GETLINK, payload, seq)
     return hdr
 
-
-link_ifmap = (
-        ("mem_start", "Q"),
-        ("mem_end", "Q"),
-        ("base_addr", "Q"),
-        ("irq", "H"),
-        ("dma", "B"),
-        ("port", "B")
-        )
-
-
-def new_ifmap(d):
-    return new_struct(d, link_ifmap)
-
-
-def parse_ifmap(b):
-    return parse_struct(b, link_ifmap)
-
-
-link_stats = (
-        ("rx_packets", "I"),
-        ("tx_packets", "I"),
-        ("rx_bytes", "I"),
-        ("tx_bytes", "I"),
-        ("rx_errors", "I"),
-        ("tx_errors", "I"),
-        ("rx_dropped", "I"),
-        ("tx_dropped", "I"),
-        ("mulicast", "I"),
-        ("rx_length_errors", "I"),
-        ("rx_over_errors", "I"),
-        ("rx_crc_errors", "I"),
-        ("rx_frame_errors", "I"),
-        ("rx_fifo_errors", "I"),
-        ("rx_missed_errors", "I"),
-        ("tx_aborted_errors", "I"),
-        ("tx_carrier_errors", "I"),
-        ("tx_fifo_errors", "I"),
-        ("tx_heartbeat_errors", "I"),
-        ("tx_window_errors", "I"),
-        ("rx_compressed", "I"),
-        ("tx_compressed", "I")
-        )
-
-def new_stats(d):
-    return new_struct(d, link_stats)
-
-
-def parse_stats(b):
-    return parse_struct(b, link_stats)
-
-
-link_stats64 = (
-        ("rx_packets", "Q"),
-        ("tx_packets", "Q"),
-        ("rx_bytes", "Q"),
-        ("tx_bytes", "Q"),
-        ("rx_errors", "Q"),
-        ("tx_errors", "Q"),
-        ("rx_dropped", "Q"),
-        ("tx_dropped", "Q"),
-        ("mulicast", "Q"),
-        ("rx_length_errors", "Q"),
-        ("rx_over_errors", "Q"),
-        ("rx_crc_errors", "Q"),
-        ("rx_frame_errors", "Q"),
-        ("rx_fifo_errors", "Q"),
-        ("rx_missed_errors", "Q"),
-        ("tx_aborted_errors", "Q"),
-        ("tx_carrier_errors", "Q"),
-        ("tx_fifo_errors", "Q"),
-        ("tx_heartbeat_errors", "Q"),
-        ("tx_window_errors", "Q"),
-        ("rx_compressed", "Q"),
-        ("tx_compressed", "Q")
-        ) 
-
-
-def new_stats64(d):
-    return new_struct(d, link_stats64)
-
-
-def parse_stats64(b):
-    return parse_struct(b, link_stats64)
 
 
 def link_attrs(attrs):
@@ -1039,29 +1238,9 @@ def new_unix_diag_msg(d):
 def parse_unix_diag_msg(b):
     return parse_struct(b, unix_diag_msg) 
 
-
 def new_sock_diag():
     return new_conn(NETLINK_SOCK_DIAG)
-
 
 def sock_diag(payload, seq): 
     hdr = new_nlmsg(SOCK_DIAG_BY_FAMILY, payload, seq, flags=F_REQUEST|F_DUMP) 
     return hdr 
-
-
-def get_ifindex(index): 
-    con = new_route()
-    con.send(route_getlink(index, 1))
-    d = con.recv(4096) 
-    b = cStringIO.StringIO(d)
-    msg = parse_nlmsg(b)
-    payload = parse_ifinfo(b)
-    attrs = parse_attrs(b, len(d)) 
-    con.close() 
-    b.close()
-    return {
-            "msg": msg,
-            "payload": payload,
-            "attrs": attrs
-            } 
-
