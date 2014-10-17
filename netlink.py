@@ -1314,10 +1314,54 @@ def route_getlink(index, seq):
     hdr = new_nlmsg(RTM_GETLINK, payload, seq)
     return hdr
 
+#IFA_ADDRESS is prefix address 
+IFA_ADDRESS = 1
+IFA_LOCAL = 2
+IFA_LABEL = 3
+IFA_BROADCAST = 4
+IFA_ANYCAST = 5
+IFA_CACHEINFO = 6
+IFA_MULTICAST = 7
+IFA_FLAGS = 8
+
+#ifa_flags 
+IFA_F_SECONDARY = 0x1
+IFA_F_NODAD	= 0x02
+IFA_F_OPTIMISTIC = 0x04
+IFA_F_DADFAILED	= 0x08
+IFA_F_HOMEADDRESS = 0x10
+IFA_F_DEPRECATED = 0x20
+IFA_F_TENTATIVE	= 0x40
+IFA_F_PERMANENT	= 0x80
+IFA_F_MANAGETEMPADDR = 0x100
+IFA_F_NOPREFIXROUTE	= 0x200
+
+ifa_cacheinfo = (
+        ("prefered", "I"),
+        ("valid", "I"),
+        ("cstamp", "I"),
+        ("tstamp", "I")
+        ) 
+
+ifaddr = (
+        ("family", "B"),
+        ("prefixlen", "B"),
+        ("flags", "B"),
+        ("scope", "B"),
+        ("index", "I")
+        )
+
+def new_addr(d):
+    return new_struct(d, ifaddr)
 
 
-def link_attrs(attrs):
-    pass
+def parse_ifaddr(b):
+    return parse_struct(b, ifaddr)
+
+
+def route_getaddr(family, seq): 
+    hdr = new_nlmsg(RTM_GETADDR, chr(family), seq, flags=F_REQUEST|F_DUMP)
+    return hdr 
 
 
 netlink_diag_req = (

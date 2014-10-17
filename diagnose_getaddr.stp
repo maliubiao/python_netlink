@@ -1,0 +1,20 @@
+probe kernel.function("rtnetlink_rcv_msg") {
+	printf("rcv_msg\n");
+}
+
+
+probe kernel.function("rtnl_get_dumpit") { 
+	printf("get_dumpit\n")
+}
+
+probe kernel.function("rtnl_get_calcit") {
+	printf("get_calcit\n")
+}
+
+probe kernel.function("rtnl_get_doit") {
+	printf("rtnl_get_doit\n")
+}
+
+probe kernel.function("inet_fill_ifaddr") {
+	printf("inet_fill_ifaddr\n")
+}
