@@ -268,39 +268,39 @@ RTA_MARK = 16
 RTA_MFC_STATS = 17 
 
 IFLA_UNSPEC = 0
-IFLA_ADDRESS = 1
-IFLA_BROADCAST = 2
-IFLA_IFNAME = 3
-IFLA_MTU = 4
+IFLA_ADDRESS = 1 #
+IFLA_BROADCAST = 2 #
+IFLA_IFNAME = 3 #
+IFLA_MTU = 4 #
 IFLA_LINK = 5
-IFLA_QDISC = 6
-IFLA_STATS = 7
+IFLA_QDISC = 6 #
+IFLA_STATS = 7 #
 IFLA_COST = 8
 IFLA_PRIORITY = 9
 IFLA_MASTER = 10
 IFLA_WIRELESS = 11
 IFLA_PROTINFO = 12
-IFLA_TXQLEN = 13
-IFLA_MAP = 14
+IFLA_TXQLEN = 13 #
+IFLA_MAP = 14 #
 IFLA_WEIGHT = 15
-IFLA_OPERSTATE = 16
-IFLA_LINKMODE = 17
+IFLA_OPERSTATE = 16 #
+IFLA_LINKMODE = 17 #
 IFLA_LINKINFO = 18
 IFLA_NET_NS_PID = 19
 IFLA_IFALIAS = 20
 IFLA_NUM_VF = 21
 IFLA_VFINFO_LIST = 22
-IFLA_STATS64 = 23
+IFLA_STATS64 = 23 #
 IFLA_VF_PORTS = 24
 IFLA_PORT_SELF = 25
-IFLA_AF_SPEC = 26 
-IFLA_GROUP = 27
+IFLA_AF_SPEC = 26 #
+IFLA_GROUP = 27 #
 IFLA_NET_NS_FD = 28
 IFLA_EXT_MASK = 29
-IFLA_PROMISCUITY = 30
-IFLA_NUM_TX_QUEUES = 31
-IFLA_NUM_RX_QUEUES = 32
-IFLA_CARRIER = 33
+IFLA_PROMISCUITY = 30 #
+IFLA_NUM_TX_QUEUES = 31 #
+IFLA_NUM_RX_QUEUES = 32 #
+IFLA_CARRIER = 33 #
 IFLA_PHYS_PORT_ID = 34
 IFLA_CARRIER_CHANGES = 35 
 
@@ -333,7 +333,7 @@ def parse_policy_string(raw):
     return raw.strip("\x00") 
 
 def parse_policy_binary(raw):
-    return raw 
+    return raw
 
 def parse_policy_u8(raw):
     return struct.unpack("B", raw)[0]
@@ -342,7 +342,7 @@ def parse_policy_u16(raw):
     return struct.unpack("H", raw)[0]
 
 def parse_policy_u32(raw):
-    return struct.unpack("H", raw)[0]
+    return struct.unpack("I", raw)[0]
 
 def parse_policy_u64(raw):
     return struct.unpack("Q", raw)[0] 
@@ -452,55 +452,64 @@ def parse_stats64(b):
     return parse_struct(b, link_stats64)
 
 
+#rtnl_link_info_fill->IFLA_INFO_KIND, -> IFLA_INFO_DATA, -> ipip_fill_info
+#IFLA_IPTUN_LINK, LOCAL, REMOTE, TTL, TOS, PMTUDISC
+#rtnl_link_slave_info_fill
+
 def parse_afspec(attr): 
     b = cStringIO.StringIO(attr["payload"])
     attrs = parse_nested(attr)
+    ret = {} 
     for m in attrs:
         if m["type"] == AF_INET: 
-            pdb.set_trace()
+            #only one
             m = parse_nested(m)[0]
             x = cStringIO.StringIO(m["payload"])
             conf = parse_ipv4_devconf(b) 
-        elif m["type"] == AF_INET6:
-            pass
-
+        elif m["type"] == AF_INET6: 
+            for x in parse_nested(m):
+                name, tp, parser = ipv6_attr_policy[x["type"]]
+                if tp == NLA_STRUCT:
+                    b = cStringIO.StringIO(x["payload"])
+                    ret[name] = parser(b) 
+    return ret
 
 ifla_attr_policy = { 
-        IFLA_ADDRESS: (NLA_BINARY, parse_policy_binary), 
-        IFLA_BROADCAST: (NLA_BINARY, parse_policy_binary),
-        IFLA_IFNAME: (NLA_STRING, parse_policy_string),
-        IFLA_MTU: (NLA_U32, parse_policy_u32),
-        IFLA_LINK:(NLA_U32, parse_policy_u32),
-        IFLA_QDISC: (NLA_STRING, parse_policy_string),
-        IFLA_STATS: (NLA_STRUCT, parse_stats),
-        IFLA_COST: (NLA_STRUCT, -1), #
-        IFLA_PRIORITY: (NLA_STRUCT, -1), #
-        IFLA_MASTER: (NLA_U32, parse_policy_u32),
-        IFLA_WIRELESS: (NLA_STRUCT, -1), #
-        IFLA_PROTINFO: (NLA_STRUCT, -1),#
-        IFLA_TXQLEN: (NLA_U32, parse_policy_u32),
-        IFLA_MAP: (NLA_STRUCT, parse_ifmap),
-        IFLA_WEIGHT: (NLA_U32, parse_policy_u32),
-        IFLA_OPERSTATE: (NLA_U8, parse_policy_u8),
-        IFLA_LINKMODE: (NLA_U8, parse_policy_u8),
-        IFLA_LINKINFO: (NLA_NESTED, -1),
-        IFLA_NET_NS_PID: (NLA_U32, parse_policy_u32),
-        IFLA_IFALIAS: (NLA_STRING, parse_policy_string),
-        IFLA_NUM_VF: (NLA_U32, parse_policy_u32), #
-        IFLA_VFINFO_LIST: (NLA_NESTED, -1),
-        IFLA_STATS64: (NLA_STRUCT, parse_stats64),
-        IFLA_VF_PORTS: (NLA_NESTED, -1),
-        IFLA_PORT_SELF: (NLA_NESTED, -1),
-        IFLA_AF_SPEC: (NLA_NESTED, -1),
-        IFLA_GROUP: (NLA_U32, parse_policy_u32), #
-        IFLA_NET_NS_FD: (NLA_U32, parse_policy_u32),
-        IFLA_EXT_MASK: (NLA_U32, parse_policy_u32),
-        IFLA_PROMISCUITY: (NLA_U32, parse_policy_u32),
-        IFLA_NUM_TX_QUEUES: (NLA_U32, parse_policy_u32),
-        IFLA_NUM_RX_QUEUES: (NLA_U32, parse_policy_u32),
-        IFLA_CARRIER: (NLA_U8, parse_policy_u8),
-        IFLA_PHYS_PORT_ID: (NLA_BINARY, parse_policy_binary),
-        IFLA_CARRIER_CHANGES: (NLA_U32, parse_policy_u32)
+        IFLA_ADDRESS: ("address", NLA_BINARY, parse_policy_binary), 
+        IFLA_BROADCAST: ("boradcast", NLA_BINARY, parse_policy_binary),
+        IFLA_IFNAME: ("ifname", NLA_STRING, parse_policy_string),
+        IFLA_MTU: ("mtu", NLA_U32, parse_policy_u32),
+        IFLA_LINK:("link", NLA_U32, parse_policy_u32),
+        IFLA_QDISC: ("qdisc", NLA_STRING, parse_policy_string),
+        IFLA_STATS: ("stats", NLA_STRUCT, parse_stats),
+        #IFLA_COST: (NLA_STRUCT, -1), #
+        #IFLA_PRIORITY: (NLA_STRUCT, -1), #
+        IFLA_MASTER: ("master", NLA_U32, parse_policy_u32), 
+        #IFLA_WIRELESS: (NLA_STRUCT, -1), #
+        #IFLA_PROTINFO: (NLA_STRUCT, -1),#
+        IFLA_TXQLEN: ("txqlen", NLA_U32, parse_policy_u32),
+        IFLA_MAP: ("map", NLA_STRUCT, parse_ifmap),
+        IFLA_WEIGHT: ("weight", NLA_U32, parse_policy_u32),
+        IFLA_OPERSTATE: ("operstate", NLA_U8, parse_policy_u8),
+        IFLA_LINKMODE: ("linkmode", NLA_U8, parse_policy_u8),
+        #IFLA_LINKINFO: (NLA_NESTED, -1),
+        IFLA_NET_NS_PID: ("net_ns_pid", NLA_U32, parse_policy_u32),
+        IFLA_IFALIAS: ("ifalias", NLA_STRING, parse_policy_string),
+        IFLA_NUM_VF: ("num_vf", NLA_U32, parse_policy_u32), #
+        #IFLA_VFINFO_LIST: (NLA_NESTED, -1),
+        IFLA_STATS64: ("stat64", NLA_STRUCT, parse_stats64),
+        #IFLA_VF_PORTS: (NLA_NESTED, -1),
+        IFLA_PORT_SELF: ("port_self", NLA_NESTED, -1),
+        IFLA_AF_SPEC: ("af_spec", NLA_NESTED, parse_afspec),
+        IFLA_GROUP: ("group", NLA_U32, parse_policy_u32), #
+        IFLA_NET_NS_FD: ("net_ns_fd", NLA_U32, parse_policy_u32),
+        IFLA_EXT_MASK: ("ext_mask", NLA_U32, parse_policy_u32),
+        IFLA_PROMISCUITY: ("promiscuity", NLA_U32, parse_policy_u32),
+        IFLA_NUM_TX_QUEUES: ("tx_queues", NLA_U32, parse_policy_u32),
+        IFLA_NUM_RX_QUEUES: ("rx_queues", NLA_U32, parse_policy_u32),
+        IFLA_CARRIER: ("carrier", NLA_U8, parse_policy_u8),
+        IFLA_PHYS_PORT_ID: ("phys_port_id", NLA_BINARY, parse_policy_binary),
+        IFLA_CARRIER_CHANGES: ("carrier_changes", NLA_U32, parse_policy_u32)
         }
 
 IFLA_VF_INFO_UNSPEC = 0
@@ -598,18 +607,14 @@ def parse_vf_link_state(b):
     return parse_struct(b, vf_link_state) 
 
 
-ifla_vf = {
-        IFLA_VF_UNSPEC: parse_vf_unspec,
-        IFLA_VF_MAC: parse_vf_mac,
-        IFLA_VF_VLAN: parse_vf_vlan,
-        IFLA_VF_TX_RATE: parse_vf_tx_rate,
-        IFLA_VF_SPOOFCHK: parse_vf_spoofchk,
-        IFLA_VF_LINK_STATE: parse_vf_link_state,
-        IFLA_VF_RATE: parse_vf_rate
-        }
-
-def parse_ifla_attrs(b):
-    pass
+ifla_vf = { 
+        IFLA_VF_MAC: ("mac", NLA_STRUCT, parse_vf_mac),
+        IFLA_VF_VLAN: ("vlan", NLA_STRUCT,  parse_vf_vlan),
+        IFLA_VF_TX_RATE: ("tx_rate", NLA_STRUCT, parse_vf_tx_rate),
+        IFLA_VF_SPOOFCHK: ("spoofchk", NLA_STRUCT, parse_vf_spoofchk),
+        IFLA_VF_LINK_STATE: ("link_state", NLA_STRUCT, parse_vf_link_state),
+        IFLA_VF_RATE: ("rate", NLA_STRUCT, parse_vf_rate)
+        } 
 
 
 #for IFLA_AF_SPEC family 2, AF_INET
@@ -698,21 +703,263 @@ IFLA_INET6_ICMP6STATS = 6
 #device token
 IFLA_INET6_TOKEN = 7 
 
-ipv6_attr_policy = {
-        IFLA_INET6_FLAGS: (NLA_U32, parse_policy_u32), 
-        IFLA_INET6_CACHEINFO: (NLA_STRUCT, parse_cacheinfo),
-        IFLA_INET6_CONF: (NLA_STRUCT, parse_inet6_conf),
-        IFLA_INET6_STATS: (NLA_STRUCT, parse_inet6_stats),
-        IFLA_INET6_ICMPSTATS: (NLA_STRUCT, parse_inet6_icmpstats),
-        IFLA_INET6_TOKEN: (NLA_STRUCT, parse_inet6_addr)
-        } 
+#ipstats mib definitions 
+IPSTATS_MIB_NUM = 0
+#frequently written fields in fast path, kept in same cache line
+#InReceives 
+IPSTATS_MIB_INPKTS = 1
+#InOctets 
+IPSTATS_MIB_INOCTETS = 2	
+#InDelivers 
+IPSTATS_MIB_INDELIVERS = 3
+#OutForwDatagrams 
+IPSTATS_MIB_OUTFORWDATAGRAMS = 4
+#OutRequests 
+IPSTATS_MIB_OUTPKTS = 5		
+#OutOctets 
+IPSTATS_MIB_OUTOCTETS = 6
+#other fields
+#InHdrErrors 
+IPSTATS_MIB_INHDRERRORS = 7
+#InTooBigErrors 
+IPSTATS_MIB_INTOOBIGERRORS = 8
+#InNoRoutes 
+IPSTATS_MIB_INNOROUTES = 9		
+#InAddrErrors 
+IPSTATS_MIB_INADDRERRORS = 10
+#InUnknownProtos 
+IPSTATS_MIB_INUNKNOWNPROTOS = 11	
+#InTruncatedPkts 
+IPSTATS_MIB_INTRUNCATEDPKTS = 12	
+#InDiscards 
+IPSTATS_MIB_INDISCARDS = 13		
+#OutDiscards 
+IPSTATS_MIB_OUTDISCARDS = 14
+#OutNoRoutes 
+IPSTATS_MIB_OUTNOROUTES = 15
+#ReasmTimeout 
+IPSTATS_MIB_REASMTIMEOUT = 16
+#ReasmReqds 
+IPSTATS_MIB_REASMREQDS = 17	
+#ReasmOKs 
+IPSTATS_MIB_REASMOKS = 18
+#ReasmFails 
+IPSTATS_MIB_REASMFAILS = 19	
+#FragOKs 
+IPSTATS_MIB_FRAGOKS = 20
+#FragFails 
+IPSTATS_MIB_FRAGFAILS = 21	
+#FragCreates 
+IPSTATS_MIB_FRAGCREATES = 22		
+#InMcastPkts 
+IPSTATS_MIB_INMCASTPKTS = 23
+#OutMcastPkts 
+IPSTATS_MIB_OUTMCASTPKTS = 24
+#InBcastPkts 
+IPSTATS_MIB_INBCASTPKTS = 25
+#OutBcastPkts 
+IPSTATS_MIB_OUTBCASTPKTS = 26
+#InMcastOctets 
+IPSTATS_MIB_INMCASTOCTETS = 27
+#OutMcastOctets 
+IPSTATS_MIB_OUTMCASTOCTETS = 28
+#InBcastOctets 
+IPSTATS_MIB_INBCASTOCTETS = 29	
+#OutBcastOctets 
+IPSTATS_MIB_OUTBCASTOCTETS = 30
+#InCsumErrors 
+IPSTATS_MIB_CSUMERRORS = 31	
+#not for 3.11
+#InNoECTPkts 
+#IPSTATS_MIB_NOECTPKTS = 32	
+#InECT1Pkts 
+#IPSTATS_MIB_ECT1PKTS = 33	
+#InECT0Pkts 
+#IPSTATS_MIB_ECT0PKTS = 34
+#InCEPkts 
+#IPSTATS_MIB_CEPKTS = 35		
 
-ifla_cache_info = (
-        ("max_reasm_len", "I"),
-        ("tstamp", "I"),
-        ("reachable_time", "I"),
-        ("retrans_time", "I")
+ipstats_mib = (
+        ("num", "Q"),
+        ("inpkts", "Q"),
+        ("inoctets", "Q"),
+        ("indelivers", "Q"),
+        ("outforwdatagrams", "Q"),
+        ("outpkts", "Q"),
+        ("outoctets", "Q"),
+        ("inhdrerrors", "Q"),
+        ("intoobigerrors", "Q"),
+        ("innoroutes", "Q"),
+        ("inaddrerrors", "Q"),
+        ("inunknownprotos", "Q"),
+        ("intruncatedpkts", "Q"),
+        ("indiscards", "Q"),
+        ("outdiscards", "Q"),
+        ("outnoroutes", "Q"),
+        ("reasmtimeout", "Q"),
+        ("reasmreqds", "Q"),
+        ("reasmoks", "Q"),
+        ("reasmfails", "Q"),
+        ("fragoks", "Q"),
+        ("fragfails", "Q"),
+        ("fragcreates", "Q"),
+        ("inmcastpkts", "Q"),
+        ("outmcastpkts", "Q"),
+        ("inbcastpkts", "Q"),
+        ("outbcastpkts", "Q"),
+        ("inmcastoctets", "Q"),
+        ("outmcastoctets", "Q"),
+        ("inbcastoctets", "Q"),
+        ("outbcastoctets", "Q"),
+        ("csumerrors", "Q"),
+        #("noectpkts", "Q"),
+        #("ect1pkts", "Q"),
+        #("ect0pkts", "Q"),
+        #("cepkts", "Q"),
         )
+
+
+def parse_ipstats_mib(b):
+    return parse_struct(b, ipstats_mib)
+
+def new_ipstats_mib(d):
+    return new_struct(d, ipstats_mib)
+
+
+ICMP_MIB_NUM = 0
+#InMsgs 
+ICMP_MIB_INMSGS	 = 1
+#InErrors 
+ICMP_MIB_INERRORS = 2		
+#InDestUnreachs 
+ICMP_MIB_INDESTUNREACHS = 3
+#InTimeExcds 
+ICMP_MIB_INTIMEEXCDS = 4	
+#InParmProbs 
+ICMP_MIB_INPARMPROBS = 5
+#InSrcQuenchs 
+ICMP_MIB_INSRCQUENCHS = 6	
+#InRedirects 
+ICMP_MIB_INREDIRECTS = 7	
+#InEchos 
+ICMP_MIB_INECHOS = 8	
+#InEchoReps 
+ICMP_MIB_INECHOREPS	 = 9
+#InTimestamps 
+ICMP_MIB_INTIMESTAMPS = 10
+#InTimestampReps 
+ICMP_MIB_INTIMESTAMPREPS = 11
+#InAddrMasks 
+ICMP_MIB_INADDRMASKS = 12
+#InAddrMaskReps 
+ICMP_MIB_INADDRMASKREPS	 = 13
+#OutMsgs 
+ICMP_MIB_OUTMSGS = 14
+#OutErrors 
+ICMP_MIB_OUTERRORS	= 15
+#OutDestUnreachs 
+ICMP_MIB_OUTDESTUNREACHS = 16
+#OutTimeExcds 
+ICMP_MIB_OUTTIMEEXCDS = 17
+#OutParmProbs 
+ICMP_MIB_OUTPARMPROBS = 18
+#OutSrcQuenchs 
+ICMP_MIB_OUTSRCQUENCHS = 19
+#OutRedirects 
+ICMP_MIB_OUTREDIRECTS = 20	
+#OutEchos 
+ICMP_MIB_OUTECHOS = 21	
+#OutEchoReps 
+ICMP_MIB_OUTECHOREPS = 22
+#OutTimestamps 
+ICMP_MIB_OUTTIMESTAMPS= 23
+#OutTimestampReps 
+ICMP_MIB_OUTTIMESTAMPREPS = 24
+#OutAddrMasks 
+ICMP_MIB_OUTADDRMASKS = 25	
+#OutAddrMaskReps 
+ICMP_MIB_OUTADDRMASKREPS = 26	
+#InCsumErrors 
+ICMP_MIB_CSUMERRORS = 27
+
+icmp_mib = ( 
+        ("num", "Q"),
+        ("inmsgs        ", "Q"),
+        ("inerrors", "Q"),
+        ("indestunreachs", "Q"),
+        ("intimeexcds", "Q"),
+        ("inparmprobs", "Q"),
+        ("insrcquenchs", "Q"),
+        ("inredirects", "Q"),
+        ("inechos", "Q"),
+        ("inechoreps    ", "Q"),
+        ("intimestamps", "Q"),
+        ("intimestampreps", "Q"),
+        ("inaddrmasks", "Q"),
+        ("inaddrmaskreps        ", "Q"),
+        ("outmsgs", "Q"),
+        ("outerrors     ", "Q"),
+        ("outdestunreachs", "Q"),
+        ("outtimeexcds", "Q"),
+        ("outparmprobs", "Q"),
+        ("outsrcquenchs", "Q"),
+        ("outredirects", "Q"),
+        ("outechos", "Q"),
+        ("outechoreps", "Q"),
+        ("outtimestamps", "Q"),
+        ("outtimestampreps", "Q"),
+        ("outaddrmasks", "Q"),
+        ("outaddrmaskreps", "Q"),
+        ("csumerrors", "Q"),
+        )
+
+def parse_icmp_mib(b):
+    return parse_struct(b, icmp_mib)
+
+def new_icmp_mib(d):
+    return new_struct(d, icmp_mib) 
+
+
+ICMP6_MIB_NUM = 0
+#InMsgs
+ICMP6_MIB_INMSGS = 1
+#InErrors
+ICMP6_MIB_INERRORS = 2
+#OutMsgs
+ICMP6_MIB_OUTMSGS = 3
+#OutErrors
+ICMP6_MIB_OUTERRORS = 4
+#InCsumErrors
+ICMP6_MIB_CSUMERRORS = 5
+
+icmp6_mib = (
+        ("num", "Q"),
+        ("inmsgs", "Q"),
+        ("inerrors", "Q"),
+        ("outmsgs", "Q"),
+        ("outerrors", "Q"),
+        ("csumerrors", "Q")
+        )
+
+def parse_icmp6_mib(b):
+    return parse_struct(b, icmp6_mib)
+
+def new_icmp6_mib(d):
+    return new_struct(d, icmp6_mib) 
+
+
+in6_addr = (
+        ("part1", "I"),
+        ("part2", "I"),
+        ("part3", "I"),
+        ("part4", "I")
+        )
+
+def parse_in6_addr(b):
+    return parse_struct(b, in6_addr)
+
+def new_in6_addr(b):
+    return new_struct(d, in6_addr)
 
 
 DEVCONF_FORWARDING = 0
@@ -745,9 +992,10 @@ DEVCONF_DISABLE_IPV6 = 26
 DEVCONF_ACCEPT_DAD = 27
 DEVCONF_FORCE_TLLAO = 28
 DEVCONF_NDISC_NOTIFY = 29
-DEVCONF_MLDV1_UNSOLICITED_REPORT_INTERVAL = 30
-DEVCONF_MLDV2_UNSOLICITED_REPORT_INTERVAL = 31
-DEVCONF_SUPPRESS_FRAG_NDISC = 32
+#not for 3.11
+#DEVCONF_MLDV1_UNSOLICITED_REPORT_INTERVAL = 30
+#DEVCONF_MLDV2_UNSOLICITED_REPORT_INTERVAL = 31
+#DEVCONF_SUPPRESS_FRAG_NDISC = 32
 
 ipv6_devconf = (
             ("forwarding", "I"),
@@ -780,10 +1028,41 @@ ipv6_devconf = (
             ("accept_dad", "I"),
             ("force_tllao", "I"),
             ("ndisc_notify", "I"),
-            ("mldv1_report_interval", "I"),
-            ("mldv2_report_interval", "I"),
-            ("suppress_frag_ndisc", "I")
+            #("mldv1_report_interval", "I"),
+            #("mldv2_report_interval", "I"),
+            #("suppress_frag_ndisc", "I")
         ) 
+
+def parse_ipv6_devconf(b):
+    return parse_struct(b, ipv6_devconf)
+
+def new_ipv6_devconf(d):
+    return new_struct(d, ipv6_devconf)
+
+ifla_cache_info = (
+        ("max_reasm_len", "I"),
+        ("tstamp", "I"),
+        ("reachable_time", "I"),
+        ("retrans_time", "I")
+        )
+
+def parse_cacheinfo(b):
+    return parse_struct(b, ifla_cache_info)
+
+def new_cacheinfo(d):
+    return new_struct(d, ifla_cache_info)
+
+
+
+ipv6_attr_policy = {
+        IFLA_INET6_FLAGS: ("flags", NLA_U32, parse_policy_u32), 
+        IFLA_INET6_CACHEINFO: ("cacheinfo", NLA_STRUCT, parse_cacheinfo),
+        IFLA_INET6_CONF: ("conf", NLA_STRUCT, parse_ipv6_devconf),
+        IFLA_INET6_STATS: ("stats", NLA_STRUCT, parse_ipstats_mib),
+        IFLA_INET6_ICMP6STATS: ("icmp6stats", NLA_STRUCT, parse_icmp6_mib),
+        IFLA_INET6_TOKEN: ("token", NLA_STRUCT, parse_in6_addr)
+        } 
+
 
 #for INET_DIAG, attrs
 INET_DIAG_NONE = 0

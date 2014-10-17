@@ -1,5 +1,6 @@
 import netlink
 import pdb
+import pprint
 import cStringIO
 
 def get_ifindex(index): 
@@ -18,10 +19,18 @@ def get_ifindex(index):
             "attrs": attrs
             } 
 def parse_msgs(msgs):
+    ret = {}
     for m in msgs: 
-        if m["type"] == netlink.IFLA_AF_SPEC: 
-            pdb.set_trace()
-            netlink.parse_afspec(m)
+        name, tp, parser = netlink.ifla_attr_policy[m["type"]] 
+        if tp == netlink.NLA_NESTED: 
+            ret[name] = parser(m)
+        elif tp == netlink.NLA_STRUCT:
+            b = cStringIO.StringIO(m["payload"])
+            result = parser(b) 
+            ret[name] = result
+        else: 
+            ret[name] = parser(m["payload"])
+    pprint.pprint(ret)
 
 import pprint 
 ret = get_ifindex(3)
