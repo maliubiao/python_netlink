@@ -94,6 +94,7 @@ NOOP = 0x1
 ERROR = 0x2
 DONE = 0x3
 OVERRUN = 0x4
+MIN_TYPE = 0x10
 
 RTM_NEWLINK = 16
 RTM_DELLINK = 17 
@@ -165,6 +166,14 @@ rtmsg = (
         ("type", "B"),
         ("flags", "I")
         )
+
+
+def new_rtmsg(d):
+    return new_struct(d, rtmsg)
+
+def parse_rtmsg(b):
+    return parse_struct(b, rtmsg)
+
 #rtm_type
 RTN_UNSPEC = 0
 #Gateway or direct route
@@ -1314,6 +1323,7 @@ def route_getlink(index, seq):
     hdr = new_nlmsg(RTM_GETLINK, payload, seq)
     return hdr
 
+
 #IFA_ADDRESS is prefix address 
 IFA_ADDRESS = 1
 IFA_LOCAL = 2
@@ -1362,6 +1372,7 @@ def parse_ifaddr(b):
 def route_getaddr(family, seq): 
     hdr = new_nlmsg(RTM_GETADDR, chr(family), seq, flags=F_REQUEST|F_DUMP)
     return hdr 
+
 
 
 netlink_diag_req = (
@@ -1567,3 +1578,51 @@ def new_sock_diag():
 def sock_diag(payload, seq): 
     hdr = new_nlmsg(SOCK_DIAG_BY_FAMILY, payload, seq, flags=F_REQUEST|F_DUMP) 
     return hdr 
+
+#list of reserved static generic netlink identifiers
+GENL_ID_GENERATE = 0
+GENL_ID_CTRL =  MIN_TYPE
+GENL_ID_VFS_DQUOT = MIN_TYPE + 1
+GENL_ID_PMCRAID = MIN_TYPE + 2
+
+def new_generic():
+    return new_conn(NETLINK_GENERIC)
+
+def generic_get_family(payload, seq):
+    hdr = new_nlmsg(GENL_ID_CTRL, payload, seq, flags=F_REQUEST|F_DUMP)
+    return hdr
+
+
+CTRL_CMD_UNSPEC = 0
+CTRL_CMD_NEWFAMILY = 1
+CTRL_CMD_DELFAMILY = 2
+CTRL_CMD_GETFAMILY = 3
+CTRL_CMD_NEWOPS = 4
+CTRL_CMD_DELOPS = 5
+CTRL_CMD_GETOPS = 6
+CTRL_CMD_NEWMCAST_GRP = 7
+CTRL_CMD_DELMCAST_GRP = 8
+CTRL_CMD_GETMCAST_GRP = 9
+
+CTRL_ATTR_UNSPEC = 0
+CTRL_ATTR_FAMILY_ID = 1
+CTRL_ATTR_FAMILY_NAME = 2
+CTRL_ATTR_VERSION = 3
+CTRL_ATTR_HDRSIZE = 4
+CTRL_ATTR_MAXATTR = 5
+CTRL_ATTR_OPS = 6
+CTRL_ATTR_MCAST_GROUPS = 7
+
+
+genlmsg = (
+        ("cmd", "B"),
+        ("version", "B"),
+        ("reserved", "H")
+        )
+
+def parse_genlmsg(b):
+    return parse_struct(b, genlmsg)
+
+def new_genlmsg(d):
+    return new_struct(d, genlmsg) 
+
