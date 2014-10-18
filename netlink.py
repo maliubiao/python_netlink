@@ -356,6 +356,16 @@ def parse_policy_u32(raw):
 def parse_policy_u64(raw):
     return struct.unpack("Q", raw)[0] 
 
+#do nothing
+def parse_policy_flag(raw):
+    return True
+
+#slot
+def parse_policy_nested(raw):
+    pass
+
+def new_policy_flag(none):
+    return ""
 
 def new_policy_binary(binary):
     return binary
@@ -370,10 +380,10 @@ def new_policy_u16(num):
     return struct.pack("H", num)
 
 def new_policy_u32(num):
-    return struct.pack("H", num)
+    return struct.pack("I", num)
 
 def new_policy_u64(raw):
-    return struct.pack("H", num) 
+    return struct.pack("Q", num) 
 
 
 link_ifmap = (
@@ -1256,11 +1266,15 @@ nlattr = (
         )
 
 def newnlattr(tp, payload):
-    return new_struct({
+    x = new_struct({
         "len": 4 + len(payload),
         "type": tp
         }, nlattr) + payload 
-
+    l = len(x)
+    #padding, align 4
+    if l % 4:
+        return x + "\x00" * (4 - l % 4)
+    return x
 
 def parse_nlattr(b): 
     at = parse_struct(b, nlattr)
@@ -1588,8 +1602,13 @@ GENL_ID_PMCRAID = MIN_TYPE + 2
 def new_generic():
     return new_conn(NETLINK_GENERIC)
 
-def generic_get_family(payload, seq):
+def generic_id_ctrl(payload, seq):
     hdr = new_nlmsg(GENL_ID_CTRL, payload, seq, flags=F_REQUEST|F_DUMP)
+    return hdr
+
+#tmp, 25 for nl80211
+def generic_wireless(payload, seq):
+    hdr = new_nlmsg(25, payload, seq, flags=F_REQUEST|F_DUMP)
     return hdr
 
 def atod(msgs, policy):
@@ -2070,3 +2089,183 @@ NL80211_ATTR_TDLS_PEER_CAPABILITY = 203
 NL80211_ATTR_IFACE_SOCKET_OWNER = 204
 NL80211_ATTR_CSA_C_OFFSETS_TX = 205
 NL80211_ATTR_MAX_CSA_COUNTERS = 206
+
+#to-do flags
+nl802_attr_policy = {
+    NL80211_ATTR_WIPHY: ("wiphy", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_WIPHY_NAME: ("wiphy_name", NLA_STRING, parse_policy_string),
+    NL80211_ATTR_WIPHY_TXQ_PARAMS: ("wiphy_txq_params", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_WIPHY_FREQ: ("wiphy_freq", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_WIPHY_CHANNEL_TYPE: ("wiphy_channel_type", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_CHANNEL_WIDTH: ("channel_width", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_CENTER_FREQ1: ("center_freq1", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_CENTER_FREQ2: ("center_freq2", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_WIPHY_RETRY_SHORT: ("wiphy_retry_short", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_WIPHY_RETRY_LONG: ("wiphy_retry_long", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_WIPHY_FRAG_THRESHOLD: ("wiphy_frag_threshold", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_WIPHY_RTS_THRESHOLD: ("wiphy_rts_threshold", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_WIPHY_COVERAGE_CLASS: ("wiphy_coverage_class", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_IFTYPE: ("iftype", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_IFINDEX: ("ifindex", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_IFNAME: ("ifname", NLA_STRING, parse_policy_string),
+    NL80211_ATTR_KEY: ("key", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_KEY_DATA: ("key_data", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_KEY_IDX: ("key_idx", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_KEY_CIPHER: ("key_cipher", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_KEY_DEFAULT: ("key_default", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_KEY_SEQ: ("key_seq", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_KEY_TYPE: ("key_type", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_BEACON_INTERVAL: ("beacon_interval", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_DTIM_PERIOD: ("dtim_period", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_BEACON_HEAD: ("beacon_head", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_BEACON_TAIL: ("beacon_tail", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_STA_AID: ("sta_aid", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_STA_FLAGS: ("sta_flags", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_STA_LISTEN_INTERVAL: ("sta_listen_interval", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_STA_SUPPORTED_RATES: ("sta_supported_rates", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_STA_PLINK_ACTION: ("sta_plink_action", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_STA_VLAN: ("sta_vlan", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_MESH_ID: ("mesh_id", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_MPATH_NEXT_HOP: ("mpath_next_hop", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_REG_ALPHA2: ("reg_alpha2", NLA_STRING, parse_policy_string),
+    NL80211_ATTR_REG_RULES: ("reg_rules", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_BSS_CTS_PROT: ("bss_cts_prot", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_BSS_SHORT_PREAMBLE: ("bss_short_preamble", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_BSS_SHORT_SLOT_TIME: ("bss_short_slot_time", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_BSS_BASIC_RATES: ("bss_basic_rates", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_BSS_HT_OPMODE: ("bss_ht_opmode", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_MESH_CONFIG: ("mesh_config", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_SUPPORT_MESH_AUTH: ("support_mesh_auth", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_MGMT_SUBTYPE: ("mgmt_subtype", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_IE: ("ie", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_SCAN_FREQUENCIES: ("scan_frequencies", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_SCAN_SSIDS: ("scan_ssids", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_SSID: ("ssid", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_AUTH_TYPE: ("auth_type", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_REASON_CODE: ("reason_code", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_FREQ_FIXED: ("freq_fixed", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_TIMED_OUT: ("timed_out", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_USE_MFP: ("use_mfp", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_CONTROL_PORT: ("control_port", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_CONTROL_PORT_ETHERTYPE: ("control_port_ethertype", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT: ("control_port_no_encrypt", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_PRIVACY: ("privacy", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_CIPHER_SUITE_GROUP: ("cipher_suite_group", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_WPA_VERSIONS: ("wpa_versions", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_PID: ("pid", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_4ADDR: ("4addr", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_PMKID: ("pmkid", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_DURATION: ("duration", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_COOKIE: ("cookie", NLA_U64, parse_policy_u64),
+    NL80211_ATTR_TX_RATES: ("tx_rates", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_FRAME: ("frame", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_FRAME_MATCH: ("frame_match", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_PS_STATE: ("ps_state", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_CQM: ("cqm", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_LOCAL_STATE_CHANGE: ("local_state_change", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_AP_ISOLATE: ("ap_isolate", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_WIPHY_TX_POWER_SETTING: ("wiphy_tx_power_setting", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_WIPHY_TX_POWER_LEVEL: ("wiphy_tx_power_level", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_FRAME_TYPE: ("frame_type", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_WIPHY_ANTENNA_TX: ("wiphy_antenna_tx", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_WIPHY_ANTENNA_RX: ("wiphy_antenna_rx", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_MCAST_RATE: ("mcast_rate", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_OFFCHANNEL_TX_OK: ("offchannel_tx_ok", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_KEY_DEFAULT_TYPES: ("key_default_types", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_WOWLAN_TRIGGERS: ("wowlan_triggers", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_STA_PLINK_STATE: ("sta_plink_state", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_SCHED_SCAN_INTERVAL: ("sched_scan_interval", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_REKEY_DATA: ("rekey_data", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_SCAN_SUPP_RATES: ("scan_supp_rates", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_HIDDEN_SSID: ("hidden_ssid", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_IE_PROBE_RESP: ("ie_probe_resp", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_IE_ASSOC_RESP: ("ie_assoc_resp", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_ROAM_SUPPORT: ("roam_support", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_SCHED_SCAN_MATCH: ("sched_scan_match", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_TX_NO_CCK_RATE: ("tx_no_cck_rate", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_TDLS_ACTION: ("tdls_action", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_TDLS_DIALOG_TOKEN: ("tdls_dialog_token", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_TDLS_OPERATION: ("tdls_operation", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_TDLS_SUPPORT: ("tdls_support", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_TDLS_EXTERNAL_SETUP: ("tdls_external_setup", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_DONT_WAIT_FOR_ACK: ("dont_wait_for_ack", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_PROBE_RESP: ("probe_resp", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_DFS_REGION: ("dfs_region", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_DISABLE_HT: ("disable_ht", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_NOACK_MAP: ("noack_map", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_INACTIVITY_TIMEOUT: ("inactivity_timeout", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_BG_SCAN_PERIOD: ("bg_scan_period", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_WDEV: ("wdev", NLA_U64, parse_policy_u64),
+    NL80211_ATTR_USER_REG_HINT_TYPE: ("user_reg_hint_type", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_SAE_DATA: ("sae_data", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_SCAN_FLAGS: ("scan_flags", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_P2P_CTWINDOW: ("p2p_ctwindow", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_P2P_OPPPS: ("p2p_oppps", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_ACL_POLICY: ("acl_policy", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_MAC_ADDRS: ("mac_addrs", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_STA_CAPABILITY: ("sta_capability", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_STA_EXT_CAPABILITY: ("sta_ext_capability", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_SPLIT_WIPHY_DUMP: ("split_wiphy_dump", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_DISABLE_VHT: ("disable_vht", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_MDID: ("mdid", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_IE_RIC: ("ie_ric", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_PEER_AID: ("peer_aid", NLA_U16, parse_policy_u16),
+    NL80211_ATTR_CH_SWITCH_COUNT: ("ch_switch_count", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_CH_SWITCH_BLOCK_TX: ("ch_switch_block_tx", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_CSA_IES: ("csa_ies", NLA_NESTED, parse_policy_nested),
+    NL80211_ATTR_CSA_C_OFF_BEACON: ("csa_c_off_beacon", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_CSA_C_OFF_PRESP: ("csa_c_off_presp", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_STA_SUPPORTED_CHANNELS: ("sta_supported_channels", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_STA_SUPPORTED_OPER_CLASSES: ("sta_supported_oper_classes", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_HANDLE_DFS: ("handle_dfs", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_OPMODE_NOTIF: ("opmode_notif", NLA_U8, parse_policy_u8),
+    NL80211_ATTR_VENDOR_ID: ("vendor_id", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_VENDOR_SUBCMD: ("vendor_subcmd", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_VENDOR_DATA: ("vendor_data", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_QOS_MAP: ("qos_map", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_WIPHY_FREQ_HINT: ("wiphy_freq_hint", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_TDLS_PEER_CAPABILITY: ("tdls_peer_capability", NLA_U32, parse_policy_u32),
+    NL80211_ATTR_IFACE_SOCKET_OWNER: ("iface_socket_owner", NLA_FLAG, parse_policy_flag),
+    NL80211_ATTR_CSA_C_OFFSETS_TX: ("csa_c_offsets_tx", NLA_BINARY, parse_policy_binary), 
+    NL80211_ATTR_MAC: ("mac", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_PREV_BSSID: ("prev_bssid", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_MNTR_FLAGS: ("mntr_flags", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_HT_CAPABILITY: ("ht_capability", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_STA_FLAGS2: ("sta_flags2", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_HT_CAPABILITY_MASK: ("ht_capability_mask", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_VHT_CAPABILITY: ("vht_capability", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_VHT_CAPABILITY_MASK: ("vht_capability_mask", NLA_BINARY, parse_policy_binary),
+    NL80211_ATTR_MAC_HINT: ("mac_hint", NLA_BINARY, parse_policy_binary)
+    }
+
+#6 octets, bssid
+NL80211_BSS_BSSID = 1
+#u32 MHz
+NL80211_BSS_FREQUENCY = 2
+#TSF, u64
+NL80211_BSS_TSF = 3
+#u16
+NL80211_BSS_BEACON_INTERVAL = 4
+#CPU order, u16
+NL80211_BSS_CAPABILITY = 5
+#info
+NL80211_BSS_INFORMATION_ELEMENTS = 6
+#singal strength s32
+NL80211_BSS_SIGNAL_MBM = 7
+#unspecified units, u8
+NL80211_BSS_SIGNAL_UNSPEC = 8
+#BSS used
+NL80211_BSS_STATUS = 9
+#age of this BSS in ms
+NL80211_BSS_SEEN_MS_AGO = 10
+#beacon frame
+NL80211_BSS_BEACON_IES = 11
+#channel width, u32
+NL80211_BSS_CHAN_WIDTH = 12
+
+#control channel width for a BSS 
+NL80211_BSS_CHAN_WIDTH_20 = 0
+NL80211_BSS_CHAN_WIDTH_10 = 1
+NL80211_BSS_CHAN_WIDTH_5 = 2
+
+

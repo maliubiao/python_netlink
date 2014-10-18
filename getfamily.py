@@ -13,7 +13,7 @@ def get_family():
                 "reserved": 0
                 }
             ) 
-    payload = netlink.generic_get_family(hdr,0x12345) 
+    payload = netlink.generic_id_ctrl(hdr,0x12345) 
     con.send(payload)
     msgs = []
     goout = False 
@@ -42,6 +42,32 @@ def get_family():
     b.close() 
     return msgs 
 
-msg = get_family()[-1] 
-pprint.pprint(netlink.atod(msg["attrs"], netlink.ctrl_attr_policy))
+def get_iface():
+    con = netlink.new_generic()
+    hdr  = netlink.new_genlmsg(
+            {
+                "cmd": netlink.NL80211_CMD_GET_SCAN,
+                "version": 0,
+                "reserved": 0
+                }
+            ) 
+    attr = netlink.newnlattr(netlink.NL80211_ATTR_IFINDEX, netlink.new_policy_u32(3)) 
+    payload = netlink.generic_wireless(hdr+attr, 0x12345) 
+    con.send(payload) 
+    d = con.recv(4096)
+    b = cStringIO.StringIO(d)
+    msg = netlink.parse_nlmsg(b)
+    mlen = b.tell() - 16 + msg["len"]
+    payload = netlink.parse_genlmsg(b) 
+    attrs = netlink.parse_attrs(b, mlen) 
+    return {
+            "msg": msg,
+            "payload": payload,
+            "attrs": attrs
+            }
+    
+
+pprint.pprint(get_iface())
+
+
 
