@@ -39,9 +39,9 @@ def get_family():
                 })
         if goout:
             break
-    b.close()
-    return msgs
+    b.close() 
+    return msgs 
 
-
-pprint.pprint(get_family())
+msg = get_family()[-1] 
+pprint.pprint(netlink.atod(msg["attrs"], netlink.ctrl_attr_policy))
 

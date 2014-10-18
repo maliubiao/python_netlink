@@ -18,22 +18,9 @@ def get_ifindex(index):
             "payload": payload,
             "attrs": attrs
             } 
-def parse_msgs(msgs):
-    ret = {}
-    for m in msgs: 
-        name, tp, parser = netlink.ifla_attr_policy[m["type"]] 
-        if tp == netlink.NLA_NESTED: 
-            ret[name] = parser(m)
-        elif tp == netlink.NLA_STRUCT:
-            b = cStringIO.StringIO(m["payload"])
-            result = parser(b) 
-            ret[name] = result
-        else: 
-            ret[name] = parser(m["payload"])
-    pprint.pprint(ret)
 
 import pprint 
 ret = get_ifindex(3)
-parse_msgs(ret["attrs"])
+pprint.pprint(netlink.atod(ret["attrs"], netlink.ifla_attr_policy))
 
    
